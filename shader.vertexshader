@@ -1,0 +1,50 @@
+#version 330 core
+
+// Input vertex data, different for all executions of this shader.
+layout(location = 0) in vec3 VertexPositionMS;
+layout(location = 1) in vec2 VertexUV;
+layout(location = 2) in vec3 VertexNormalMS;
+
+// Output data ; will be interpolated for each fragment.
+out vec2 UV;
+out vec3 PositionWS;
+out vec3 NormalCS;
+out vec3 EyeDirectionCS;
+out vec3 LeftLightDirectionCS;
+out vec3 RightLightDirectionCS;
+
+// Values that stay constant for the whole mesh.
+uniform mat4 MVP;
+uniform mat4 View;
+uniform mat4 Model;
+uniform vec3 LeftLight;
+uniform vec3 RightLight;
+
+void main() {
+
+	// Output position of the vertex, in clip space : MVP * position
+	gl_Position =  MVP * vec4(VertexPositionMS, 1);
+	
+	// Position of the vertex, in worldspace : M * position
+	PositionWS = (Model * vec4(VertexPositionMS, 1)).xyz;
+	
+	// Vector that goes from the vertex to the camera, in camera space.
+	// In camera space, the camera is at the origin (0,0,0).
+	vec3 VertexCS = (View * Model * vec4(VertexPositionMS, 1)).xyz;
+	EyeDirectionCS = vec3(0, 0, 0) - VertexCS;
+
+	// Vector that goes from the vertex to the light, in camera space. M is ommited because it's identity.
+	vec3 LeftLightCS = (View * vec4(LeftLight, 1)).xyz;
+	LeftLightDirectionCS = LeftLightCS + EyeDirectionCS;
+
+	// Vector that goes from the vertex to the light, in camera space. M is ommited because it's identity.
+	vec3 RightLightCS = (View * vec4(RightLight, 1)).xyz;
+	RightLightDirectionCS = RightLightCS + EyeDirectionCS;
+	
+	// Normal of the the vertex, in camera space
+	// Only correct if ModelMatrix does not scale the model ! Use its inverse transpose if not.
+	NormalCS = (View * Model * vec4(VertexNormalMS, 0)).xyz;
+	
+	// UV of the vertex. No special space for this one.
+	UV = VertexUV;
+}
