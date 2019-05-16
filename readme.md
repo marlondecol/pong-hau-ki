@@ -12,7 +12,7 @@ Confira, a seguir, os comandos para jogar:
 * **Numpad 1**: Visão frontal.
 * **Numpad 3**: Visão traseira.
 * **Numpad 7**: Visão superior.
-* **E**: Alterna a exibição do ambiente de fundo. Quando estiver sendo exibido, o *Ambient Color* do shader é definido para **\[0.6, 0.6, 0.6\]**. Caso contrário, é definido para **\[0.1, 0.1, 0.1\]**.
+* **E**: Alterna a exibição do ambiente de fundo. Quando estiver sendo exibido, o *Ambient Color* do shader é definido para (0.6, 0.6, 0.6). Caso contrário, é definido para (0.1, 0.1, 0.1).
 * **O**: Define a projeção da câmera para perspectiva.
 * **P**: Define a projeção da câmera para ortogonal.
 * **R**: Mostra uma animação sobre o tabuleiro ou posiciona uma câmera estática.
