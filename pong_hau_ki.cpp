@@ -425,6 +425,14 @@ int main() {
 			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
 				allowButton = true;
 			}
+
+			if (showEnvironment) {
+				LightPower = 800;
+				AmbientColor = vec3(0.6, 0.6, 0.6);
+			} else {
+				LightPower = 1000;
+				AmbientColor = backgroundColor;
+			}
 		} else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !startScreen) { // R
 			// Verifica se é possível alternar a animação.
 			if (allowButton) {
@@ -464,14 +472,6 @@ int main() {
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE) {
 				allowButton = true;
 			}
-		}
-
-		if (showEnvironment) {
-			LightPower = 800;
-			AmbientColor = vec3(0.6, 0.6, 0.6);
-		} else {
-			LightPower = 1000;
-			AmbientColor = backgroundColor;
 		}
 		
 		// Define a projeção de acordo com a escolha anterior.
