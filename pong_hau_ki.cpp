@@ -463,9 +463,9 @@ int main() {
 	float timer = 0;
 
 	// Nomes dos jogadores e placar.
-	vector<string> players = {"Marlon", "Tatiane"};
+	vector<string> players = {"", ""};
 	vector<int> score = {0, 0};
-	bool confirmNames = true;
+	bool confirmNames = false;
 
 	/**
 	 * Implementação da GUI para os nomes.
@@ -732,7 +732,7 @@ int main() {
 	TwBar *Settings = TwNewBar("Configuracoes");
 
 	// Define alguns parâmetros da GUI.
-	TwDefine("`Pong Hau K'i` color='0 0 0' fontresizable=false iconified=false movable=true position='16 16' refresh=0.01 resizable=false size='335 399' valueswidth=174");
+	TwDefine("`Pong Hau K'i` color='0 0 0' fontresizable=false iconified=false movable=false position='16 16' refresh=0.01 resizable=false size='335 399' valueswidth=174");
 	TwDefine("Configuracoes color='0 0 0' fontresizable=false iconified=true movable=false position='1101 16' refresh=0.05 resizable=false size='249 259' valueswidth=84");
 	TwDefine("TW_HELP visible=false");
 
