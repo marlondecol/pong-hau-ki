@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 
@@ -107,9 +108,8 @@ void screenPositionToWorldRay(double mouseX, double mouseY, mat4 ViewMatrix, mat
  * vec3 aabb_min: coordenadas X, Y e Z mínimas da malha quando não transformada.
  * vec3 aabb_max: coordenadas X, Y e Z máximas. Muitas vezes, equivale a aabb_min * -1, se a malha está centralizada, mas nem sempre é caso.
  * mat4 ModelMatrix: Transformação aplicada à malha (que será, assim, também aplicada ao seu bounding box).
- * float &intersection_distance: saída. Distância entre o rayOrigin e a intersecção com o OBB.
  */
-bool testRayOBBIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 aabb_min, vec3 aabb_max, mat4 ModelMatrix, float &intersection_distance) {
+bool testRayOBBIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 aabb_min, vec3 aabb_max, mat4 ModelMatrix) {
 	float e, f;
 
 	float tMin = 0.0;
@@ -209,9 +209,19 @@ bool testRayOBBIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 aabb_min, ve
 		return false;
 	}
 
-	intersection_distance = tMin;
-
 	return true;
+}
+
+void OnCharCallback(GLFWwindow *window, unsigned int codepoint) {
+	TwEventCharGLFW(codepoint, GLFW_PRESS);
+}
+
+void OnKeyCallback(GLFWwindow *window, unsigned int key, int scancode, int action, int mods) {
+	TwEventKeyGLFW(key, action);
+}
+
+void TW_CALL CopyStdStringToClient(string& destinationClientString, const string& sourceLibraryString) {
+	destinationClientString = sourceLibraryString;
 }
 
 int main() {
@@ -256,6 +266,7 @@ int main() {
 
 	// Garante que seja possível capturar o ESC sendo pressionado.
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	// Permite detectar os status dos botões do mouse.
 	glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GL_TRUE);
     // Exibe o mouse.
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -308,7 +319,6 @@ int main() {
 		{"objects/piece3.obj", "textures/person.dds"},
 		{"objects/piece4.obj", "textures/animal.dds"},
 		{"objects/board.obj", "textures/wood.dds"},
-		{"objects/draw.obj", "textures/black.dds"},
 		{"objects/env.obj", "textures/env.dds"},
 		{"objects/name.obj", "textures/black.dds"},
 		{"objects/table.obj", "textures/table.dds"},
@@ -444,13 +454,55 @@ int main() {
 	vec3 RightLightPos = vec3(-30, 20, -17);
 	
 	// Propriedades das luzes.
-	float LightColor[3] = {1, 1, 1};
 	float LightPower = 800;
+	vec3 LightColor = vec3(1, 1, 1);
 	vec3 AmbientColor = vec3(0.6, 0.6, 0.6);
 
 	// Para calcular a velocidade.
 	float deltaTime, currentTime, lastTime = glfwGetTime();
 	float timer = 0;
+
+	// Nomes dos jogadores e placar.
+	vector<string> players = {"Marlon", "Tatiane"};
+	vector<int> score = {0, 0};
+	bool confirmNames = true;
+
+	/**
+	 * Implementação da GUI para os nomes.
+	 */
+
+	// Inicializa a GUI.
+	TwInit(TW_OPENGL_CORE, NULL);
+	
+	// Informa para a GUI o tamanho da janela GLFW.
+	TwWindowSize(width, height);
+	
+	// Cria uma nova GUI.
+	TwBar *Players = TwNewBar("Nomes dos jogadores");
+
+	// Define alguns parâmetros da GUI.
+	TwDefine("'Nomes dos jogadores' color='0 0 0' fontresizable=false iconified=false movable=false position='573 435' refresh=0.05 resizable=false size='220 144' valueswidth=120");
+	TwDefine("TW_HELP visible=false");
+
+	TwCopyStdStringToClientFunc(CopyStdStringToClient);
+
+	// Monta a GUI com os dados abaixo.
+	TwAddVarRW(Players, "Jogador 1", TW_TYPE_STDSTRING, &players[0], NULL);
+	TwAddVarRW(Players, "Jogador 2", TW_TYPE_STDSTRING, &players[1], NULL);
+	// Informações adicionais.
+	TwAddSeparator(Players, NULL, NULL);
+	TwAddButton(Players, "Jogador 1: pecas azuis.", NULL, NULL, NULL);
+	TwAddButton(Players, "Jogador 2: pecas verdes.", NULL, NULL, NULL);
+	// "Botão" de confirmação dos nomes.
+	TwAddSeparator(Players, "Separador", "visible=false");
+	TwAddVarRW(Players, "Confirmar", TW_TYPE_BOOLCPP, &confirmNames, "visible=false");
+
+	// Define os callbacks de eventos da GLFW.
+	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun) TwEventMouseButtonGLFW);
+	glfwSetCursorPosCallback(window, (GLFWcursorposfun) TwEventMousePosGLFW);
+	glfwSetScrollCallback(window, (GLFWscrollfun) TwEventMouseWheelGLFW);
+	glfwSetCharCallback(window, (GLFWcharfun) OnCharCallback);
+	glfwSetKeyCallback(window, (GLFWkeyfun) TwEventKeyGLFW);
  
 	do {
 		// Mede a velocidade de processamento.
@@ -474,8 +526,7 @@ int main() {
 		// Para cada objeto, atribui uma textura e mapeamento UV e desenha o objeto.
 		for (int i = 0; i < vectorsSize; i++) {
 			if (i < objects.size()) {
-				if (objects[i][0] == "objects/draw.obj") continue;
-				if (objects[i][0] == "objects/text.obj" && (int) (timer * 2) % 2 != 0) continue;
+				if (objects[i][0] == "objects/text.obj" && (!confirmNames || (int) (timer * 2) % 2 != 0)) continue;
 			}
 
 			// 1º atributo do buffer: vértices.
@@ -503,7 +554,7 @@ int main() {
 			glUniform3f(RightLightID, RightLightPos.x, RightLightPos.y, RightLightPos.z);
 
 			// Envia as propriedades das luzes para o shader.
-			glUniform3f(LightColorID, LightColor[0], LightColor[1], LightColor[2]);
+			glUniform3f(LightColorID, LightColor.x, LightColor.y, LightColor.z);
 			glUniform1f(LightPowerID, LightPower);
 			glUniform3f(AmbientColorID, AmbientColor.x, AmbientColor.y, AmbientColor.z);
 
@@ -526,16 +577,31 @@ int main() {
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
+
+		// Exibe a GUI até preencher os dois nomes.
+		if (!confirmNames) TwDraw();
+
+		if (!players[0].empty() && !players[1].empty()) {
+			TwDefine("'Nomes dos jogadores'/Confirmar visible=true");
+			TwDefine("'Nomes dos jogadores'/Separador visible=true");
+		} else {
+			TwDefine("'Nomes dos jogadores'/Confirmar visible=false");
+			TwDefine("'Nomes dos jogadores'/Separador visible=false");
+		}
 		
 		// Troca os buffers.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
+		// Cronometra o tempo.
 		timer += deltaTime;
 	} while (
-		(glfwGetKey(window, GLFW_KEY_ENTER) != GLFW_PRESS && glfwGetKey(window, GLFW_KEY_KP_ENTER) != GLFW_PRESS) // ENTER
-		&& (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0) // ESC
+		(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0) // ESC
+		&& ((glfwGetKey(window, GLFW_KEY_ENTER) != GLFW_PRESS && glfwGetKey(window, GLFW_KEY_KP_ENTER) != GLFW_PRESS) // ENTER
+		|| !confirmNames) // Se os nomes ainda não foram preenchidos
 	);
+
+	TwDeleteBar(Players);
 
 	/**
 	 * Variáveis de visualização e lógica do programa.
@@ -549,11 +615,15 @@ int main() {
 	bool showEnvironment = true;
 	// Flag para não aceitar nenhuma ação externa durante a tela inicial.
 	bool startScreen = true;
+	// Flag para quando estiver havendo a movimentação de uma peça.
+	bool isInMovement = false;
 
 	// Alterna a exibição das opções.
 	int showSettings = 0;
 	// Alterna a exibição das informações do mouse.
-	int showMouseInfo = 0;
+	int showGameInfo = 0;
+	// Última peça movida.
+	int lastMovedPiece;
 
 	// A distância em X = 17 e Z = 7 até o ponto de origem no mundo.
 	float cameraDistance = hypotf(17, 7);
@@ -567,16 +637,22 @@ int main() {
 	float rotationTime = 4;
 	// Tempo que a câmera leva para sair da tela inicial, em segundos.
 	float startToFinalCamTime = 1;
+	// Tempo de animação das peças.
+	float startToFinalMovementTime = 0.25;
+	// Salva o tempo em que uma animação começou.
+	float animationBeginTime = 0;
 
 	// Posição do cursor.
 	double mouseX, mouseY;
 
-	// Serve para suavizar a movimentação da câmera ao pressionar ENTER na tela inicial.
-	vec3 camPositionSofter = vec3(0, 0, 0);
+	// Variáveis do ray-picking.
+	vec3 rayOrigin, rayDirection;
 	// Look vector da câmera na tela de início.
 	vec3 startCamLookVector = vec3(0, -2.85, 0);
 	// Posição da câmera na tela de início.
 	vec3 startCamPosition = vec3(-7, 1.1, 0);
+	// Variáveis auxiliares das animações das peças.
+	vec3 startPiecePosition, finalPiecePosition;
 
 	// Posições possíveis da câmera.
 	vec3 viewPositions[4][3] = {
@@ -590,11 +666,41 @@ int main() {
 	 * Variáveis da lógica de jogo.
 	 */
 
-	// Peça movida.
-	string movedPiece;
+	// Peça selecionada pelo ray-picking.
+	string selectedPiece = "Nenhuma";
+	// Última peça movida.
+	string lastMovement = "Nenhuma";
+	// Jogador da vez.
+	string nowTurn = "Ninguem";
+	// Final da última partida.
+	string lastRound = "Nenhuma partida finalizada";
 
+	// Usado para converter o log de partidas, que será usado na GUI.
+	const char *statusLabel;
+
+	// Indica se alguém ganhou a partida.
+	bool isGameOver = false;
+	// Indica se houve empate.
+	bool isDraw = false;
+
+	// Contador de jogadas restantes.
+	int counterLeft = 50;
+	// Total de empates.
+	int draws = 0;
+	// Mantém a última posição da última peça selecionada.
+	int lastSpot;
 	// Contador de jogadas. Conta de forma decrescente.
 	int movesLeft = 50;
+	
+	// Posição inicial de cada peça, relativas às coordenadas da variável spotsCoords[].
+	vector<int> piecesSpots = {0, 1, 3, 2};
+	// Indica a quem pertence cada peça.
+	vector<int> piecesOwner = {1, 0, 0, 1};
+	// Rotação inicial, em Y, de cada peça, apenas para estética.
+	vector<vec3> piecesRotations(obbs.size());
+	
+	// Aplica uma rotação aleatória em Y em cada peça, como informado anteriormente.
+	for (vec3 &pieceRotation : piecesRotations) pieceRotation = vec3(0, rand() % 360, 0);
 
 	// Coordenadas de cada casa do tabuleiro.
 	vector<vec3> spotsCoords = {
@@ -606,6 +712,8 @@ int main() {
 	};
 	
 	// Matriz de adjacências das casas do tabuleiro, que indica as relações de uma com as outras.
+	// Para entendimento, esta matriz diz que há ou não a conexão da casa de uma linha com as casas das colunas.
+	// No caso da casa 0, por exemplo, há a conexão dela com as casas 1, 3 e 4.
 	int spotsAdjMat[spotsCoords.size()][spotsCoords.size()] = {
 		/******0**1**2**3**4*/
 		/*0*/ {0, 1, 0, 1, 1},
@@ -616,59 +724,16 @@ int main() {
 	};
 
 	/**
-	 * Posições iniciais das peças.
-	 */
-	vector<int> randInitPos;
-
-	// Define posições aleatórias para as peças, onde cada posição é uma casa e estas foram definidas anteriormente.
-	int obbsSize = obbs.size();
-
-	srand(time(NULL));
-
-	for (int i = 0; i < obbsSize; i++) {
-		int randPos = rand() % (obbsSize + 1);
-
-		while (find(randInitPos.begin(), randInitPos.end(), randPos) != randInitPos.end()) {
-			randPos = rand() % (obbsSize + 1);
-		}
-
-		randInitPos.push_back(randPos);
-	}
-
-	vector<int> piecesSpots(obbsSize);
-	vector<quat> piecesQuats(obbsSize);
-
-	piecesSpots[0] = 0;
-	piecesSpots[1] = 1;
-	piecesSpots[2] = 3;
-	piecesSpots[3] = 2;
-
-	for (int i = 0; i < obbsSize; i++) {
-		piecesQuats[i] = quat(vec3(0, rand() % 360, 0));
-	}
-	
-	float intersection_distance;
-	
-	vec3 rayOrigin;
-	vec3 rayDirection;
-
-	/**
 	 * Implementação da GUI.
 	 */
-
-	// Inicializa a GUI.
-	TwInit(TW_OPENGL_CORE, NULL);
-	
-	// Informa para a GUI o tamanho da janela GLFW.
-	TwWindowSize(width, height);
 	
 	// Cria uma nova GUI.
+	TwBar *GameInfo = TwNewBar("Pong Hau K'i");
 	TwBar *Settings = TwNewBar("Configuracoes");
-	TwBar *MouseInfo = TwNewBar("Informacoes do mouse");
 
 	// Define alguns parâmetros da GUI.
-	TwDefine("Configuracoes color='0 0 0' fontresizable=false iconified=true movable=false position='16 16' refresh=0.05 resizable=false size='249 259' valueswidth=84");
-	TwDefine("'Informacoes do mouse' color='0 0 0' fontresizable=false iconified=true movable=false position='971 16' refresh=0.01 resizable=false size='379 339' valueswidth=144");
+	TwDefine("`Pong Hau K'i` color='0 0 0' fontresizable=false iconified=false movable=true position='16 16' refresh=0.01 resizable=false size='335 399' valueswidth=174");
+	TwDefine("Configuracoes color='0 0 0' fontresizable=false iconified=true movable=false position='1101 16' refresh=0.05 resizable=false size='249 259' valueswidth=84");
 	TwDefine("TW_HELP visible=false");
 
 	// Define tipos de dados enumerados para serem usados na GUI como dropdowns.
@@ -698,7 +763,30 @@ int main() {
 	TwType viewModeTwType = TwDefineEnum("ViewmodeType", viewModes, 4);
 	TwType projectionModeTwType = TwDefineEnum("ProjectionmodeType", projectionModes, 2);
 
-	// Monta a GUI de Configurações com os dados abaixo.
+	// Monta a GUI com informações do jogo.
+	TwAddVarRO(GameInfo, "Jogador da vez", TW_TYPE_STDSTRING, &nowTurn, NULL);
+	TwAddButton(GameInfo, "Log", NULL, NULL, "label='Nenhuma partida finalizada'");
+	// Placar
+	TwAddVarRO(GameInfo, &players[0][0], TW_TYPE_INT32, &score[0], "group=Placar");
+	TwAddVarRO(GameInfo, &players[1][0], TW_TYPE_INT32, &score[1], "group=Placar");
+	TwAddVarRO(GameInfo, "Empates", TW_TYPE_INT32, &draws, "group=Placar");
+	// Partida atual.
+	TwAddVarRO(GameInfo, "Jogadas restantes", TW_TYPE_INT32, &counterLeft, "group='Partida atual'");
+	TwAddVarRO(GameInfo, "Peca selecionada", TW_TYPE_STDSTRING, &selectedPiece, "group='Partida atual'");
+	TwAddVarRO(GameInfo, "Utima jogada", TW_TYPE_STDSTRING, &lastMovement, "group='Partida atual'");
+	// Cursor.
+	TwAddVarRO(GameInfo, "Posicao X", TW_TYPE_DOUBLE, &mouseX, "group=Cursor");
+	TwAddVarRO(GameInfo, "Posicao Y", TW_TYPE_DOUBLE, &mouseY, "group=Cursor");
+	// Ray Casting.
+	TwAddVarRO(GameInfo, "Direcao do raio", TW_TYPE_DIR3F, &rayDirection, "group='Ray Picking' opened=true arrowcolor='63 127 255' showval=false");
+	// Dicas.
+	TwAddSeparator(GameInfo, NULL, NULL);
+	TwAddButton(GameInfo, "Pressione M para exibir/ocultar esta janela.", NULL, NULL, NULL);
+	TwAddButton(GameInfo, "Pressione S para exibir/ocultar as Configuracoes.", NULL, NULL, NULL);
+	TwAddSeparator(GameInfo, NULL, NULL);
+	TwAddButton(GameInfo, "Pressione ESC para sair do jogo.", NULL, NULL, NULL);
+
+	// Monta a GUI de Configurações.
 	// Opções gráficas.
 	TwAddVarRW(Settings, "Ambiente de fundo", TW_TYPE_BOOLCPP, &showEnvironment, "group=Graficos");
 	// Opções de câmera.
@@ -709,19 +797,6 @@ int main() {
 	// Opções de luz.
 	TwAddVarRW(Settings, "Cor", TW_TYPE_COLOR3F, &LightColor, "group=Iluminacao opened=true");
 	TwAddVarRW(Settings, "Brilho", TW_TYPE_FLOAT, &LightPower, "group=Iluminacao min=0 max=10000 step=10");
-
-	// Monta a GUI com informações do mouse com os dados abaixo.
-	// Peça selecionada.
-	TwAddVarRO(MouseInfo, "Peca movida", TW_TYPE_STDSTRING, &movedPiece, NULL);
-	// Cursor.
-	TwAddVarRO(MouseInfo, "Posicao X", TW_TYPE_DOUBLE, &mouseX, "group=Cursor");
-	TwAddVarRO(MouseInfo, "Posicao Y", TW_TYPE_DOUBLE, &mouseY, "group=Cursor");
-	// Ray Casting.
-	TwAddVarRO(MouseInfo, "Direcao do raio", TW_TYPE_DIR3F, &rayDirection, "group='Ray Picking' opened=true");
- 
-	// Define os callbacks de eventos da GLFW.
-	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun) TwEventMouseButtonGLFW);
-	glfwSetCursorPosCallback(window, (GLFWcursorposfun) TwEventMousePosGLFW);
  
 	// Para calcular a velocidade.
 	lastTime = glfwGetTime();
@@ -733,91 +808,213 @@ int main() {
 		deltaTime = currentTime - lastTime;
 		lastTime = currentTime;
 
-		// Verifica a posição do cursor.
-		glfwGetCursorPos(window, &mouseX, &mouseY);
-
-		// A seleção do objetos é feita aqui!
-		// Ao invés de selecionar a cada frame em que o botão do mouse está pressionado,
-		// verifica-se apenas quando o ele é solto.
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !startScreen) {
-			if (allowButton) {
-				// Faz as conversões das coordenadas do cursor do mouse na tela para o mundo.
-				screenPositionToWorldRay(mouseX, mouseY, ViewMatrix, ProjectionMatrix, rayOrigin, rayDirection);
-
-				// Testa cada OBB.
-				// Uma engine de física pode ser mais eficiente que isto,
-				// porque ela já possui algumas estruturas de particionamento espacial,
-				// como uma árvore binária de particionamento espacial (BSP-Tree),
-				// hierarquia de volume delimitador (BVH) ou outros.
-				for (int i = 0; i < obbs.size(); i++) {
-					vec3 aabb_min = aabb_obbs[i][0];
-					vec3 aabb_max = aabb_obbs[i][1];
-					
-					mat4 RotationMatrix = toMat4(piecesQuats[i]);
-					mat4 TranslationMatrix = translate(mat4(), spotsCoords[piecesSpots[i]]);
-					
-					ModelMatrix = TranslationMatrix * RotationMatrix;
-
-					if (testRayOBBIntersection(rayOrigin, rayDirection, aabb_min, aabb_max, ModelMatrix, intersection_distance)) {
-						int spot = piecesSpots[i];
-						
-						vector<int> neighbors;
-
-						for (int neighbor = 0; neighbor < spotsCoords.size(); neighbor++) {
-							if (!spotsAdjMat[spot][neighbor]) {
-								continue;
-							}
-
-							neighbors.push_back(neighbor);
-						}
-
-						// for (int &jk : spotsAdjMat[spot]) {
-							// cout << jk << " ";
-						// }
-
-						// cout << endl;
-
-						// for (int &neighbor : neighbors) {
-							// cout << neighbor << " ";
-						// }
-
-						// cout << endl;
-
-						cout << spot << " " << to_string(spotsCoords[spot]) << endl;
-
-						bool canMove = false;
-
-						for (int &neighbor : neighbors) {
-							if (find(piecesSpots.begin(), piecesSpots.end(), neighbor) == piecesSpots.end()) {
-								canMove = true;
-
-								piecesSpots[i] = neighbor;
-
-								break;
-							}
-						}
-
-						// if (!canMove) {}
-
-						movedPiece = "Peca " + to_string(i + 1);
-
-						break;
-					}
-				}
-
-				allowButton = false;
-			}
-
-			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
-				allowButton = true;
-			}
-		}
-		
 		// Limpa a tela.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Usa os shaders.
 		glUseProgram(ProgramID);
+
+		// Troca o nome do jogador da vez de acordo com a jogada.
+		if (!isGameOver && !isDraw) nowTurn = players[counterLeft % 2];
+
+		// Verifica a posição do cursor.
+		glfwGetCursorPos(window, &mouseX, &mouseY);
+		
+		// Faz as conversões das coordenadas do cursor do mouse na tela para o mundo.
+		screenPositionToWorldRay(mouseX, mouseY, ViewMatrix, ProjectionMatrix, rayOrigin, rayDirection);
+
+		// Testa cada OBB.
+		// Uma engine de física pode ser mais eficiente que isto,
+		// porque ela já possui algumas estruturas de particionamento espacial,
+		// como uma árvore binária de particionamento espacial (BSP-Tree),
+		// hierarquia de volume delimitador (BVH) ou outros.
+		for (int i = 0; i < obbs.size(); i++) {
+			// Verifica as coordenadas com os menores e maiores valores de cada OBB.
+			vec3 aabb_min = aabb_obbs[i][0];
+			vec3 aabb_max = aabb_obbs[i][1];
+			
+			// Aplica as rotações e translações.
+			mat4 RotationMatrix = toMat4(quat(piecesRotations[i]));
+			mat4 TranslationMatrix = translate(mat4(), spotsCoords[piecesSpots[i]]);
+			
+			// Adiciona as alterações dos modelos ao ModelMatrix.
+			ModelMatrix = TranslationMatrix * RotationMatrix;
+
+			// Testa a intersecção do raio.
+			bool itCollides = testRayOBBIntersection(rayOrigin, rayDirection, aabb_min, aabb_max, ModelMatrix);
+
+			// A seleção do objetos é feita aqui!
+			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && !startScreen) {
+				if (allowButton && itCollides && piecesOwner[i] == counterLeft % 2 && !isInMovement && (!isGameOver && !isDraw)) {
+					// Casa em que o objeto intersectado está.
+					int spot = piecesSpots[i];
+					
+					// Recebe os vizinhos desta casa, ...
+					vector<int> neighbors;
+					
+					// ... verifica quais são...
+					for (int neighbor = 0; neighbor < spotsCoords.size(); neighbor++) {
+						if (!spotsAdjMat[spot][neighbor]) {
+							continue;
+						}
+
+						// Caso haja a conexão entre as casas, é um vizinho.
+						neighbors.push_back(neighbor);
+					}
+
+					// ... e verifica se algum vizinho está vago.
+					for (int &neighbor : neighbors) {
+						// Casa o find() retornar true, é porque a busca chegou ao final
+						// da lista das casa em que estão as outras peças,
+						// o que significa que um vizinho está vago.
+						if (find(piecesSpots.begin(), piecesSpots.end(), neighbor) == piecesSpots.end()) {
+							// Salva a peça movimentada.
+							lastMovedPiece = i;
+
+							// Salva a posição e rotação anteriores.
+							startPiecePosition = spotsCoords[spot];
+
+							// Salva o tempo de início da animação.
+							animationBeginTime = timer;
+
+							// Define que a peça está em movimento.
+							isInMovement = true;
+
+							// A peça recebe a nova posição, para que possa ser aplicada a translação.
+							piecesSpots[i] = neighbor;
+
+							// Salva a nova posição e rotação aleatória.
+							finalPiecePosition = spotsCoords[neighbor];
+
+							spotsCoords[neighbor] = startPiecePosition;
+
+							// Uma jogada a menos.
+							counterLeft--;
+
+							// É infomado para o jogador a peça selecionada.
+							lastMovement = "Da casa " + to_string(spot) + " para a casa " + to_string(piecesSpots[i]);
+							
+							// Começa informando que é game over.
+							isGameOver = true;
+
+							// Verifica as condições para a próxima jogada.
+							for (int p = 0; p < piecesOwner.size(); p++) {
+								// Caso verdadeiro, significa que é peça é pertence ao próximo jogador.
+								if (piecesOwner[p] == counterLeft % 2) {
+									// Casa atual desta peça.
+									int thisSpot = piecesSpots[p];
+
+									// Verifica os vizinhos desta peça.
+									vector<int> nextNeighbors;
+
+									// Essa verificação é feita para ambas as peças até
+									// ter certeza que há um vizinho livre, ou seja,
+									// que uma próxima jogada ainda pode ser realizada.
+									for (int n = 0; n < spotsCoords.size(); n++) {
+										if (!spotsAdjMat[piecesSpots[p]][n]) {
+											continue;
+										}
+										
+										// Caso haja a conexão entre as casas, é um vizinho para a próxima jogada.
+										nextNeighbors.push_back(n);
+									}
+
+									// Verifica se algum dos vizinhos para a próxima jogada estão vagos.
+									for (int nextNeighbor : nextNeighbors) {
+										// Caso ache, então o jogo não acabou.
+										if (find(piecesSpots.begin(), piecesSpots.end(), nextNeighbor) == piecesSpots.end()) {
+											isGameOver = false;
+											break;
+										}
+									}
+
+									if (!isGameOver) break;
+								}
+							}
+
+							// Se não há mais jogadas restantes e ninguém ganhou, então houve empate!
+							if (!counterLeft && !isGameOver) isDraw = true;
+
+							// Sendo assim, encerra-se a busca por um vizinho vago e o jogo segue normalmente.
+							break;
+						}
+					}
+
+					if (isGameOver || isDraw) {
+						if (isGameOver) {
+							// Incrementa o placar.
+							score[(counterLeft - 1) % 2]++;
+
+							// Informa o que aconteceu na partida.
+							lastRound = "Parabens, " + players[(counterLeft - 1) % 2] + "! Voce venceu!";
+						} else if (isDraw) {
+							// Incrementa o placar.
+							draws++;
+
+							// Informa o que aconteceu na partida.
+							lastRound = "A partida terminou empatada!";
+						}
+
+						// Ninguém joga agora!
+						nowTurn = "ENTER para continuar...";
+						
+						// Usado como parâmetro na função abaixo.
+						statusLabel = &lastRound[0];
+
+						// Atualiza a GUI das informações do jogo.
+						TwSetParam(GameInfo, "Log", "label", TW_PARAM_CSTRING, 1, statusLabel);
+					}
+
+					// Ao clicar, bloqueia esta ação até soltar o botão.
+					allowButton = false;
+				}
+
+				// Se o botão foi solto, desbloqueia esta ação.
+				if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
+					allowButton = true;
+				}
+			}
+
+			if (itCollides) {
+				// Se colide, muda o nome da peça selecionada e já para a detecção...
+				selectedPiece = "Peca de " + players[piecesOwner[i]];
+
+				break;
+			}
+			
+			// Senão, diz que não há nenhuma peça selecionada...
+			selectedPiece = "Nenhuma";
+		}
+
+		// Mantém tudo como está até que um jogador pressione ENTER.
+		if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_KP_ENTER) == GLFW_PRESS && (isGameOver || isDraw)) {
+			if (isGameOver) {
+				// Relatório disponível para a próxima partida.
+				lastRound = players[(counterLeft - 1) % 2] + " venceu a ultima partida";
+			} else if (isDraw) {
+				// Relatório disponível para a próxima partida.
+				lastRound = "A ultima partida terminou empatada!";
+			}
+
+			// Reseta o log de movimentos.
+			lastMovement = "Nenhuma";
+
+			// Reposiciona as peças para as posições iniciais.
+			piecesSpots = {0, 1, 3, 2};
+
+			// Reseta o contador.
+			counterLeft = 50;
+
+			 // Reseta as flags de game over e empate.
+			isGameOver = false;
+			isDraw = false;
+
+			// Usado como parâmetro na função abaixo.
+			statusLabel = &lastRound[0];
+
+			// Atualiza a GUI das informações do jogo.
+			TwSetParam(GameInfo, "Log", "label", TW_PARAM_CSTRING, 1, statusLabel);
+		}
 
 		// Escolhe os modos de projeção.
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !startScreen) { // P
@@ -865,16 +1062,16 @@ int main() {
 			// Verifica se é possível alternar a exibição das informações do mouse.
 			if (allowButton) {
 				// Obtém o estado atual da janela de informações do mouse.
-				TwGetParam(MouseInfo, NULL, "iconified", TW_PARAM_INT32, 1, &showMouseInfo);
+				TwGetParam(GameInfo, NULL, "iconified", TW_PARAM_INT32, 1, &showGameInfo);
 
 				// Inverte o status da variável.
-				showMouseInfo = !showMouseInfo;
+				showGameInfo = !showGameInfo;
 				
 				// Ao pressionar a tecla, bloqueia esta ação até soltá-la.
 				allowButton = false;
 
 				// Define o parâmetro "iconified" da janela de informações do mouse para o estado atual da variável.
-				TwSetParam(MouseInfo, NULL, "iconified", TW_PARAM_INT32, 1, &showMouseInfo);
+				TwSetParam(GameInfo, NULL, "iconified", TW_PARAM_INT32, 1, &showGameInfo);
 			}
 
 			// Se a tecla foi solta, desbloqueia esta ação.
@@ -967,8 +1164,6 @@ int main() {
 				viewPositions[0][1].z + ((speed * (finalCamLookVector.z - startCamLookVector.z)) * stepRatio)
 			);
 
-			timer += deltaTime;
-
 			if (timer >= startToFinalCamTime) {
 				// Agora já não está mais na tela inicial.
 				// Portanto são aceitas ações externas (botões sendo pressionados).
@@ -979,7 +1174,7 @@ int main() {
 		// Para cada objeto, atribui uma textura e mapeamento UV e desenha o objeto.
 		for (int i = 0; i < vectorsSize; i++) {
 			if (i < objects.size()) {
-				if (objects[i][0] == "objects/draw.obj" || objects[i][0] == "objects/text.obj") continue;
+				if (objects[i][0] == "objects/text.obj" && (!(isGameOver || isDraw) || (int) (timer * 2) % 2 != 0)) continue;
 				if (objects[i][0] == "objects/env.obj" && !showEnvironment) continue;
 			}
 
@@ -999,12 +1194,28 @@ int main() {
 			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
 
 			if (i < obbs.size()) {
-				mat4 RotationMatrix = toMat4(piecesQuats[i]);
+				if (isInMovement && i == lastMovedPiece) {
+					piecesRotations[i].y += 2 * M_PI / 180;
+
+					spotsCoords[piecesSpots[i]].x += ((finalPiecePosition.x - startPiecePosition.x) / startToFinalMovementTime) * deltaTime;
+					spotsCoords[piecesSpots[i]].y += ((finalPiecePosition.y - startPiecePosition.y) / startToFinalMovementTime) * deltaTime;
+					spotsCoords[piecesSpots[i]].z += ((finalPiecePosition.z - startPiecePosition.z) / startToFinalMovementTime) * deltaTime;
+
+					// Quando a animação acabar, define a posição e rotação verdadeiras,
+					// e sinaliza que a peça não está mais em movimento.
+					if ((timer - animationBeginTime) >= startToFinalMovementTime) {
+						spotsCoords[piecesSpots[i]] = finalPiecePosition;
+						isInMovement = false;
+					}
+				}
+
+				// mat4 RotationMatrix = toMat4(quat(piecesRotations[i]));
+				mat4 RotationMatrix = eulerAngleXYZ(piecesRotations[i].x, piecesRotations[i].y, piecesRotations[i].z);
 				mat4 TranslationMatrix = translate(mat4(1.0), spotsCoords[piecesSpots[i]]);
 
 				ModelMatrix = TranslationMatrix * RotationMatrix;
 			} else if (i >= objects.size()) {
-				mat4 RotationMatrix = toMat4(piecesQuats[i - objects.size()]);
+				mat4 RotationMatrix = toMat4(quat(piecesRotations[i - objects.size()]));
 				mat4 TranslationMatrix = translate(mat4(1.0), spotsCoords[piecesSpots[i - objects.size()]]);
 
 				ModelMatrix = TranslationMatrix * RotationMatrix;
@@ -1054,6 +1265,9 @@ int main() {
 		// Troca os buffers.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		// Cronometra o tempo.
+		timer += deltaTime;
 	} while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0); // ESC
 
 	// Limpa todos os vetores e os buffers.
