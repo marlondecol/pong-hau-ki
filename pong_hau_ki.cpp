@@ -1,3 +1,32 @@
+/**
+ * 
+ * ██████╗  ██████╗ ███╗   ██╗ ██████╗     ██╗  ██╗ █████╗ ██╗   ██╗    ██╗  ██╗██╗
+ * ██╔══██╗██╔═══██╗████╗  ██║██╔════╝     ██║  ██║██╔══██╗██║   ██║    ██║ ██╔╝██║
+ * ██████╔╝██║   ██║██╔██╗ ██║██║  ███╗    ███████║███████║██║   ██║    █████╔╝ ██║
+ * ██╔═══╝ ██║   ██║██║╚██╗██║██║   ██║    ██╔══██║██╔══██║██║   ██║    ██╔═██╗ ██║
+ * ██║     ╚██████╔╝██║ ╚████║╚██████╔╝    ██║  ██║██║  ██║╚██████╔╝    ██║  ██╗██║
+ * ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝     ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝     ╚═╝  ╚═╝╚═╝
+ * 
+ * 
+ * pong_hau_ki.cpp
+ * 
+ * 
+ * Um jogo chinês chamado Pong Hau K'i,
+ * modelado no Blender e desenvolvido em C++ com a OpenGL.
+ * 
+ * 
+ * Desenvolvido por Marlon Luís de Col
+ * Engenharia de Computação
+ * 2018 © UNOESC Chapecó
+ * 
+ */
+
+
+
+/**
+ * Inclui as bibliotecas necessárias.
+ */
+
 // Inclui o header padrão.
 #include <bits/stdc++.h>
 
@@ -27,6 +56,12 @@
 using namespace glm;
 using namespace std;
 
+
+
+/**
+ * Variáveis globais.
+ */
+
 // Tamanho da janela.
 float width = 1366.0;
 float height = 720.0;
@@ -34,7 +69,10 @@ float height = 720.0;
 // Definição da cor de fundo do jogo.
 vec3 backgroundColor = vec3(0.1, 0.1, 0.1);
 
+// Ponteiro GLFW da janela deste jogo!
 GLFWwindow* window;
+
+
 
 /**
  * Obtém as coordenadas da tela e transforma para o espaço do mundo.
@@ -99,6 +137,8 @@ void screenPositionToWorldRay(double mouseX, double mouseY, mat4 ViewMatrix, mat
 	outOrigin = vec3(lRayStart_world);
 	outDirection = normalize(lRayDir_world);
 }
+
+
 
 /**
  * Testa se houve intersecção com algum Bouding Box Orientado.
@@ -212,18 +252,30 @@ bool testRayOBBIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 aabb_min, ve
 	return true;
 }
 
+/**
+ * Ao pressionar teclas alfanuméricas, executa esta ação.
+ */
 void OnCharCallback(GLFWwindow *window, unsigned int codepoint) {
 	TwEventCharGLFW(codepoint, GLFW_PRESS);
 }
 
+/**
+ * Ao pressionar qualquer tecla, executa esta ação.
+ */
 void OnKeyCallback(GLFWwindow *window, unsigned int key, int scancode, int action, int mods) {
 	TwEventKeyGLFW(key, action);
 }
 
+/**
+ * Permite fazer alterações nas strings do C++ através do AntTweakBar.
+ */
 void TW_CALL CopyStdStringToClient(string& destinationClientString, const string& sourceLibraryString) {
 	destinationClientString = sourceLibraryString;
 }
 
+/**
+ * Aqui é onde tudo começa, acontece e termina!
+ */
 int main() {
 	// Inicializa a GLFW.
 	if (!glfwInit()) {
@@ -293,24 +345,24 @@ int main() {
 	glBindVertexArray(VertexArrayID);
 
 	// Cria e compila o programa GLSL dos shaders.
-	GLuint ProgramID = LoadShaders("shader.vertexshader", "shader.fragmentshader");
+	GLuint ShaderID = LoadShaders("shader.vertexshader", "shader.fragmentshader");
 
-	// Manuseia os uniforms relacionados ao "MVP".
-	GLuint MatrixID = glGetUniformLocation(ProgramID, "MVP");
-	GLuint ViewMatrixID = glGetUniformLocation(ProgramID, "View");
-	GLuint ModelMatrixID = glGetUniformLocation(ProgramID, "Model");
+	// Manuseia os uniforms das matrizes do programa.
+	GLuint MatrixID = glGetUniformLocation(ShaderID, "MVP");
+	GLuint ViewMatrixID = glGetUniformLocation(ShaderID, "View");
+	GLuint ModelMatrixID = glGetUniformLocation(ShaderID, "Model");
 	
 	// Manuseia o uniform "Texture".
-	GLuint TextureID = glGetUniformLocation(ProgramID, "Texture");
+	GLuint TextureID = glGetUniformLocation(ShaderID, "Texture");
 
 	// Manuseia os uniforms de luzes.
-	GLuint LeftLightID = glGetUniformLocation(ProgramID, "LeftLight");
-	GLuint RightLightID = glGetUniformLocation(ProgramID, "RightLight");
+	GLuint LeftLightID = glGetUniformLocation(ShaderID, "LeftLight");
+	GLuint RightLightID = glGetUniformLocation(ShaderID, "RightLight");
 
 	// Manusei os uniforms das luzes.
-	GLuint LightColorID = glGetUniformLocation(ProgramID, "LightColor");
-	GLuint LightPowerID = glGetUniformLocation(ProgramID, "LightPower");
-	GLuint AmbientColorID = glGetUniformLocation(ProgramID, "AmbientColor");
+	GLuint LightColorID = glGetUniformLocation(ShaderID, "LightColor");
+	GLuint LightPowerID = glGetUniformLocation(ShaderID, "LightPower");
+	GLuint AmbientColorID = glGetUniformLocation(ShaderID, "AmbientColor");
 
 	// Lista os arquivos dos objetos.
 	vector<vector<string>> objects = {
@@ -467,6 +519,8 @@ int main() {
 	vector<int> score = {0, 0};
 	bool confirmNames = false;
 
+
+
 	/**
 	 * Implementação da GUI para os nomes.
 	 */
@@ -514,7 +568,7 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Usa os shaders.
-		glUseProgram(ProgramID);
+		glUseProgram(ShaderID);
 		
 		// Matrizes principais configuradas para a tela inicial.
 		ProjectionMatrix = perspective(radians(35.0f), 16.0f / 9.0f, 0.01f, 100.0f);
@@ -529,17 +583,17 @@ int main() {
 				if (objects[i][0] == "objects/text.obj" && (!confirmNames || (int) (timer * 2) % 2 != 0)) continue;
 			}
 
-			// 1º atributo do buffer: vértices.
+			// 1º buffer de atributos: vértices.
 			glEnableVertexAttribArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, vertexbuffers[i]);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
 
-			// 2º atributo do buffer: UVs.
+			// 2º buffer de atributos: UVs.
 			glEnableVertexAttribArray(1);
 			glBindBuffer(GL_ARRAY_BUFFER, uvbuffers[i]);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*) 0);
 
-			// 3º atributo do buffer: normals.
+			// 3º buffer de atributos: normals.
 			glEnableVertexAttribArray(2);
 			glBindBuffer(GL_ARRAY_BUFFER, normalbuffers[i]);
 			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
@@ -581,6 +635,7 @@ int main() {
 		// Exibe a GUI até preencher os dois nomes.
 		if (!confirmNames) TwDraw();
 
+		// Esconde o separador e botão de confirmação até que os dois nomes sejam informados.
 		if (!players[0].empty() && !players[1].empty()) {
 			TwDefine("'Nomes dos jogadores'/Confirmar visible=true");
 			TwDefine("'Nomes dos jogadores'/Separador visible=true");
@@ -593,7 +648,7 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		// Cronometra o tempo.
+		// Incrementa o cronômetro.
 		timer += deltaTime;
 	} while (
 		(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0) // ESC
@@ -601,7 +656,10 @@ int main() {
 		|| !confirmNames) // Se os nomes ainda não foram preenchidos
 	);
 
+	// Deleta a janela de inserção dos nomes dos jogadores.
 	TwDeleteBar(Players);
+
+
 
 	/**
 	 * Variáveis de visualização e lógica do programa.
@@ -662,6 +720,8 @@ int main() {
 		{vec3(0, cameraDistance + 10, 0), vec3(0, 0, 0), vec3(-1, 1, 0)}, // 7
 	};
 
+
+
 	/**
 	 * Variáveis da lógica de jogo.
 	 */
@@ -711,7 +771,7 @@ int main() {
 		vec3(0.001157, 0.2, 0.023826)
 	};
 	
-	// Matriz de adjacências das casas do tabuleiro, que indica as relações de uma com as outras.
+	// Matriz de adjacência das casas do tabuleiro, que indica as relações de uma com as outras.
 	// Para entendimento, esta matriz diz que há ou não a conexão da casa de uma linha com as casas das colunas.
 	// No caso da casa 0, por exemplo, há a conexão dela com as casas 1, 3 e 4.
 	int spotsAdjMat[spotsCoords.size()][spotsCoords.size()] = {
@@ -722,6 +782,8 @@ int main() {
 		/*3*/ {1, 0, 0, 0, 1},
 		/*4*/ {1, 1, 1, 1, 0}
 	};
+
+
 
 	/**
 	 * Implementação da GUI.
@@ -798,6 +860,12 @@ int main() {
 	TwAddVarRW(Settings, "Cor", TW_TYPE_COLOR3F, &LightColor, "group=Iluminacao opened=true");
 	TwAddVarRW(Settings, "Brilho", TW_TYPE_FLOAT, &LightPower, "group=Iluminacao min=0 max=10000 step=10");
  
+
+
+	/**
+	 * Começa o jogo de fato.
+	 */
+ 
 	// Para calcular a velocidade.
 	lastTime = glfwGetTime();
 	timer = 0;
@@ -812,7 +880,7 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Usa os shaders.
-		glUseProgram(ProgramID);
+		glUseProgram(ShaderID);
 
 		// Troca o nome do jogador da vez de acordo com a jogada.
 		if (!isGameOver && !isDraw) nowTurn = players[counterLeft % 2];
@@ -940,6 +1008,7 @@ int main() {
 						}
 					}
 
+					// Partida finalizada!
 					if (isGameOver || isDraw) {
 						if (isGameOver) {
 							// Incrementa o placar.
@@ -1178,17 +1247,17 @@ int main() {
 				if (objects[i][0] == "objects/env.obj" && !showEnvironment) continue;
 			}
 
-			// 1º atributo do buffer: vértices.
+			// 1º buffer de atributos: vértices.
 			glEnableVertexAttribArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, vertexbuffers[i]);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
 
-			// 2º atributo do buffer: UVs.
+			// 2º buffer de atributos: UVs.
 			glEnableVertexAttribArray(1);
 			glBindBuffer(GL_ARRAY_BUFFER, uvbuffers[i]);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*) 0);
 
-			// 3º atributo do buffer: normals.
+			// 3º buffer de atributos: normals.
 			glEnableVertexAttribArray(2);
 			glBindBuffer(GL_ARRAY_BUFFER, normalbuffers[i]);
 			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*) 0);
@@ -1254,7 +1323,7 @@ int main() {
 			}
 		}
 
-		// Desabilita os arrays de atributos.
+		// Desabilita os buffers de atributos.
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
@@ -1266,18 +1335,18 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		// Cronometra o tempo.
+		// Incrementa o cronômetro.
 		timer += deltaTime;
 	} while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0); // ESC
-
-	// Limpa todos os vetores e os buffers.
+	
+	// Limpa todos os vetores, buffers e tudo o que for necessário destruir.
 	for (GLuint &i : vertexbuffers) glDeleteBuffers(1, &i);
 	for (GLuint &i : uvbuffers) glDeleteBuffers(1, &i);
 	for (GLuint &i : normalbuffers) glDeleteBuffers(1, &i);
 
 	for (string &i : textures) glDeleteTextures(1, &Textures.find(i)->second);
 
-	glDeleteProgram(ProgramID);
+	glDeleteProgram(ShaderID);
 	glDeleteVertexArrays(1, &VertexArrayID);
 
 	// Fecha a janela do OpenGL e finaliza a GUI e a GLFW.
